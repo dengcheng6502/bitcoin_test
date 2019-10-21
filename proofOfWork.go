@@ -55,6 +55,7 @@ func (pow *ProofOfWork) Run() (int64, []byte) {
 
 		if hashInt.Cmp(pow.target) == -1 {
 			fmt.Printf("found hashs: %x,nonce:%d\n", hash, nonce)
+			fmt.Println("")
 			break
 		} else {
 			nonce++
@@ -62,4 +63,14 @@ func (pow *ProofOfWork) Run() (int64, []byte) {
 	}
 
 	return nonce, hash[:]
+}
+
+func (pow *ProofOfWork) IsValid() bool {
+	var hashInt big.Int
+	data := pow.PrepareData(pow.block.Nonce)
+	hash := sha256.Sum256(data)
+	hashInt.SetBytes(hash[:])
+
+	return hashInt.Cmp(pow.target) == -1
+
 }
