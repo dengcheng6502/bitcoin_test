@@ -1,13 +1,17 @@
-package src
+package main
 
 import "fmt"
 
-func main() {
-	bc := NewBlockChain()
-	bc.AddBlock("A send B 1BTC")
-	bc.AddBlock("B send C 1BTC")
+func (cli *CLI) AddBlock(data string) {
+	cli.bc.AddBlock(data)
+}
 
-	for _, block := range bc.blocks {
+func (cli *CLI) PrintChain() {
+	it := cli.bc.NewIterator()
+
+	for {
+
+		block := it.Next()
 		fmt.Printf("Version: %d\n", block.Version)
 		fmt.Printf("PrevBlockHash: %x\n", block.PrevBlockHash)
 		fmt.Printf("Hash: %x\n", block.Hash)
@@ -15,7 +19,11 @@ func main() {
 		fmt.Printf("Bits: %d\n", block.Bits)
 		fmt.Printf("Nonce: %d\n", block.Nonce)
 		fmt.Printf("Data: %s\n", block.Data)
-		fmt.Printf("IsValid :  %v\n", NewProofOfwork(block).IsValid())
-		fmt.Println("")
+		fmt.Printf("Isvalid: %v\n", NewProofOfwork(block).IsValid())
+		if len(block.PrevBlockHash) == 0 {
+			fmt.Println("print over!")
+			break
+		}
+
 	}
 }
