@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/boltdb/bolt"
 	"os"
 )
@@ -8,6 +9,7 @@ import (
 const dbFile = "blockChain.db"
 const blockBucket = "bucket"
 const lastHashkey = "lastkey"
+const genesisInfo = "genesis"
 
 type BlockChain struct {
 	//数据库操作句柄
@@ -15,7 +17,20 @@ type BlockChain struct {
 	tail []byte
 }
 
-func NewBlockChain() *BlockChain {
+func IsDBExist() bool {
+	_, err := os.Stat(dbFile)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+func InitBlockChain(address string) *BlockChain {
+	if IsDBExist() {
+		fmt.Println("blockchain exist already,no need to create!")
+		os.Exit(1)
+
+	}
 
 	db, err := bolt.Open(dbFile, 0600, nil)
 	CheckErr("NewBlockChain1", err)
@@ -23,19 +38,16 @@ func NewBlockChain() *BlockChain {
 	var lastHash []byte
 
 	db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(blockBucket))
-		if bucket != nil {
-			lastHash = bucket.Get([]byte(lastHashkey))
-		} else {
-			genesis := NewGenesisBlock()
-			bucket, err = tx.CreateBucket([]byte(blockBucket))
-			CheckErr("NewBlockChain2", err)
-			err = bucket.Put(genesis.Hash, genesis.Serialize())
-			CheckErr("NewBlockChain3", err)
-			err = bucket.Put([]byte(lastHashkey), genesis.Hash)
-			CheckErr("NewBlockChain4", err)
-			lastHash = genesis.Hash
-		}
+
+		coinbase := NewCoinbaseTx(address, genesisInfo)
+		genesis := NewGenesisBlock(coinbase)
+		bucket, err := tx.CreateBucket([]byte(blockBucket))
+		CheckErr("NewBlockChain2", err)
+		err = bucket.Put(genesis.Hash, genesis.Serialize())
+		CheckErr("NewBlockChain3", err)
+		err = bucket.Put([]byte(lastHashkey), genesis.Hash)
+		CheckErr("NewBlockChain4", err)
+		lastHash = genesis.Hash
 
 		return nil
 	})
@@ -43,7 +55,30 @@ func NewBlockChain() *BlockChain {
 
 }
 
-func (bc *BlockChain) AddBlock(data string) {
+func GetBlockChainHandler() *BlockChain {
+
+	if !IsDBExist() {
+		fmt.Println("Please create blockchain first!")
+		os.Exit(1)
+
+	}
+
+	db, err := bolt.Open(dbFile, 0600, nil)
+	CheckErr("GetBlockChainHandler1", err)
+
+	var lastHash []byte
+
+	db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(blockBucket))
+		if bucket != nil {
+			lastHash = bucket.Get([]byte(lastHashkey))
+		}
+
+		return nil
+	})
+	return &BlockChain{db, lastHash}
+}
+func (bc *BlockChain) AddBlock(txs []*Transaction) {
 	var prevBlockHash []byte
 	bc.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBucket))
@@ -54,7 +89,7 @@ func (bc *BlockChain) AddBlock(data string) {
 		prevBlockHash = bucket.Get([]byte(lastHashkey))
 		return nil
 	})
-	block := NewBlock(data, prevBlockHash)
+	block := NewBlock(txs, prevBlockHash)
 	err := bc.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBucket))
 		if bucket == nil {
@@ -62,6 +97,7 @@ func (bc *BlockChain) AddBlock(data string) {
 		}
 
 		err := bucket.Put(block.Hash, block.Serialize())
+
 		CheckErr("AddBlock1", err)
 		err = bucket.Put([]byte(lastHashkey), block.Hash)
 		CheckErr("AddBlock2", err)

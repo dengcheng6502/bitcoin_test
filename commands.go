@@ -3,9 +3,10 @@ package main
 import "fmt"
 
 func (cli *CLI) AddBlock(data string) {
-	cli.bc.AddBlock(data)
+
 }
 
+/*
 func (cli *CLI) PrintChain() {
 	it := cli.bc.NewIterator()
 
@@ -26,4 +27,10 @@ func (cli *CLI) PrintChain() {
 		}
 
 	}
+}
+*/
+func (cli *CLI) CreateChain(address string) {
+	bc := InitBlockChain(address)
+	defer bc.db.Close()
+	fmt.Println("Create blockchain successfully!")
 }

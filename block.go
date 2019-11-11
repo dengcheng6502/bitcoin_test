@@ -14,7 +14,7 @@ type Block struct {
 	TimeStamp     int64
 	Bits          int64
 	Nonce         int64
-	Data          []byte
+	Transaction   []*Transaction
 }
 
 func (block *Block) Serialize() []byte {
@@ -35,7 +35,7 @@ func Deserialize(data []byte) *Block {
 	CheckErr("Deserialize", err)
 	return &block
 }
-func NewBlock(data string, prevBlockHash []byte) *Block {
+func NewBlock(txs []*Transaction, prevBlockHash []byte) *Block {
 	var block Block
 	block = Block{
 		Version:       1,
@@ -43,7 +43,7 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 		MerKelRoot:    []byte{},
 		TimeStamp:     time.Now().Unix(),
 		Bits:          targetBits,
-		Data:          []byte(data)}
+		Transaction:   txs}
 
 	pow := NewProofOfwork(&block)
 	nonce, hash := pow.Run()
@@ -53,6 +53,6 @@ func NewBlock(data string, prevBlockHash []byte) *Block {
 	return &block
 }
 
-func NewGenesisBlock() *Block {
-	return NewBlock("Genesis Block!", []byte{})
+func NewGenesisBlock(coinbase *Transaction) *Block {
+	return NewBlock([]*Transaction{coinbase}, []byte{})
 }

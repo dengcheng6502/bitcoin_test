@@ -32,7 +32,8 @@ func (pow *ProofOfWork) PrepareData(nonce int64) []byte {
 		IntToByte(block.TimeStamp),
 		IntToByte(targetBits),
 		IntToByte(nonce),
-		block.Data}
+		//block.Transaction.TransactionHash()
+	}
 
 	data := bytes.Join(tmp, []byte{})
 	return data
