@@ -43,6 +43,7 @@ func NewBlock(txs []*Transaction, prevBlockHash []byte) *Block {
 		MerKelRoot:    []byte{},
 		TimeStamp:     time.Now().Unix(),
 		Bits:          targetBits,
+		Nonce:         0,
 		Transaction:   txs}
 
 	pow := NewProofOfwork(&block)

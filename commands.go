@@ -2,14 +2,10 @@ package main
 
 import "fmt"
 
-func (cli *CLI) AddBlock(data string) {
-
-}
-
-/*
 func (cli *CLI) PrintChain() {
-	it := cli.bc.NewIterator()
-
+	bc := GetBlockChainHandler()
+	defer bc.db.Close()
+	it := bc.NewIterator()
 	for {
 
 		block := it.Next()
@@ -19,7 +15,7 @@ func (cli *CLI) PrintChain() {
 		fmt.Printf("TimeStamp: %d\n", block.TimeStamp)
 		fmt.Printf("Bits: %d\n", block.Bits)
 		fmt.Printf("Nonce: %d\n", block.Nonce)
-		fmt.Printf("Data: %s\n", block.Data)
+		//fmt.Printf("Data: %s\n", block.Data)
 		fmt.Printf("Isvalid: %v\n", NewProofOfwork(block).IsValid())
 		if len(block.PrevBlockHash) == 0 {
 			fmt.Println("print over!")
@@ -28,9 +24,24 @@ func (cli *CLI) PrintChain() {
 
 	}
 }
-*/
+
 func (cli *CLI) CreateChain(address string) {
 	bc := InitBlockChain(address)
 	defer bc.db.Close()
 	fmt.Println("Create blockchain successfully!")
+}
+
+func (cli *CLI) GetBalance(address string) {
+	bc := GetBlockChainHandler()
+	defer bc.db.Close()
+	utxos := bc.FindUTXO(address)
+
+	var total float64 = 0
+
+	for _, utxo := range utxos {
+		total += utxo.Value
+	}
+
+	fmt.Printf("The balance of %s is %f\n", address, total)
+
 }

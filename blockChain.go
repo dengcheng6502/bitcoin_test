@@ -33,7 +33,7 @@ func InitBlockChain(address string) *BlockChain {
 	}
 
 	db, err := bolt.Open(dbFile, 0600, nil)
-	CheckErr("NewBlockChain1", err)
+	CheckErr("InitBlockChain0", err)
 
 	var lastHash []byte
 
@@ -42,11 +42,11 @@ func InitBlockChain(address string) *BlockChain {
 		coinbase := NewCoinbaseTx(address, genesisInfo)
 		genesis := NewGenesisBlock(coinbase)
 		bucket, err := tx.CreateBucket([]byte(blockBucket))
-		CheckErr("NewBlockChain2", err)
+		CheckErr("InitBlockChain1", err)
 		err = bucket.Put(genesis.Hash, genesis.Serialize())
-		CheckErr("NewBlockChain3", err)
+		CheckErr("InitBlockChain2", err)
 		err = bucket.Put([]byte(lastHashkey), genesis.Hash)
-		CheckErr("NewBlockChain4", err)
+		CheckErr("InitBlockChain3", err)
 		lastHash = genesis.Hash
 
 		return nil
@@ -80,6 +80,7 @@ func GetBlockChainHandler() *BlockChain {
 }
 func (bc *BlockChain) AddBlock(txs []*Transaction) {
 	var prevBlockHash []byte
+
 	bc.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBucket))
 		if bucket == nil {
@@ -90,6 +91,7 @@ func (bc *BlockChain) AddBlock(txs []*Transaction) {
 		return nil
 	})
 	block := NewBlock(txs, prevBlockHash)
+
 	err := bc.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(blockBucket))
 		if bucket == nil {
@@ -132,4 +134,56 @@ func (it *BlockChainIterator) Next() (block *Block) {
 	})
 	CheckErr("Next()", err)
 	return
+}
+
+func (bc *BlockChain) FindUTXOTransactions(address string) []Transaction {
+	var UTXOTransactions []Transaction
+	spentUTXO := make(map[string][]int64)
+
+	it := bc.NewIterator()
+	for {
+		block := it.Next()
+		for _, tx := range block.Transaction {
+			if !tx.IsCoinbase() {
+				for _, input := range tx.TXInputs {
+					if input.CanUnlockUTXOWith(address) {
+						spentUTXO[string(tx.TXID)] = append(spentUTXO[string(tx.TXID)], input.Vout)
+					}
+				}
+			}
+		OUTPUTS:
+			for currIndex, output := range tx.TXOutputs {
+				if spentUTXO[string(tx.TXID)] != nil {
+					indexs := spentUTXO[string(tx.TXID)]
+					for _, index := range indexs {
+						if int64(currIndex) == index {
+							continue OUTPUTS
+						}
+					}
+				}
+				if output.CanBeUnlockWith(address) {
+					UTXOTransactions = append(UTXOTransactions, *tx)
+				}
+			}
+
+		}
+		if len(block.PrevBlockHash) == 0 {
+			break
+		}
+	}
+	return UTXOTransactions
+}
+
+func (bc *BlockChain) FindUTXO(address string) []*TXOutput {
+	var UTXOs []*TXOutput
+	txs := bc.FindUTXOTransactions(address)
+
+	for _, tx := range txs {
+		for _, utxo := range tx.TXOutputs {
+			if utxo.CanBeUnlockWith(address) {
+				UTXOs = append(UTXOs, &utxo)
+			}
+		}
+	}
+	return UTXOs
 }

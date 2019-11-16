@@ -18,6 +18,7 @@ const AddBlockCmdString = "addBlock"
 const PrintChainCmdString = "printChain"
 const CreateChainCmdString = "createChain"
 const SednCmdString = "send"
+const GetBalanceCmdString = "getbalance"
 
 type CLI struct {
 	//bc *BlockChain
@@ -40,11 +41,12 @@ func (cli *CLI) Run() {
 
 	CreateChainCmd := flag.NewFlagSet(CreateChainCmdString, flag.ExitOnError)
 	addBlockCmd := flag.NewFlagSet(AddBlockCmdString, flag.ExitOnError)
+	getBalanceCmd := flag.NewFlagSet(GetBalanceCmdString, flag.ExitOnError)
 	printChainCmd := flag.NewFlagSet(PrintChainCmdString, flag.ExitOnError)
 
 	createChainCmdPara := CreateChainCmd.String("address", "", "address info")
 	addBlockCmdPara := addBlockCmd.String("data", "", "block transaction info!")
-
+	getBalanceCmdPara := getBalanceCmd.String("address", "", "address info")
 	switch os.Args[1] {
 	case CreateChainCmdString:
 		err := CreateChainCmd.Parse(os.Args[2:])
@@ -74,6 +76,18 @@ func (cli *CLI) Run() {
 		CheckErr("Run2()", err)
 		if printChainCmd.Parsed() {
 			//cli.PrintChain()
+		}
+
+	case GetBalanceCmdString:
+		err := getBalanceCmd.Parse(os.Args[2:])
+		CheckErr("Run2()", err)
+		if getBalanceCmd.Parsed() {
+			if *getBalanceCmdPara == "" {
+				fmt.Println("address data should not be emptyal!")
+				cli.printUsage()
+			}
+
+			cli.GetBalance(*getBalanceCmdPara)
 		}
 
 	default:

@@ -60,22 +60,12 @@ func NewCoinbaseTx(address string, data string) *Transaction {
 }
 
 func (tx *Transaction) IsCoinbase() bool {
-
-}
-
-func (bc *BlockChain) FindUTXOTransactions(address string) []Transaction {
-	var UTXOTransactions []Transaction
-	it := bc.NewIterator()
-	for {
-		block := it.Next()
-		for _, tx := range block.Transaction {
-			for _, output := range tx.TXOutputs {
-				if output.CanBeUnlockWith(address) {
-					UTXOTransactions = append(UTXOTransactions, *tx)
-				}
-			}
+	if len(tx.TXInputs) == 1 {
+		if len(tx.TXInputs[0].TXID) == 0 && tx.TXInputs[0].Vout == -1 {
+			return true
 		}
 	}
+	return false
 }
 
 /*
