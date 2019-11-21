@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"fmt"
+	"os"
 )
 
 const reward = 12.5
@@ -68,7 +69,38 @@ func (tx *Transaction) IsCoinbase() bool {
 	return false
 }
 
-/*
-func NewTransaction(from,to string,amount float64.bc *BlockChain){
+func NewTransaction(from, to string, amount float64, bc *BlockChain) *Transaction {
+
+	validUTXOs := make(map[string][]int64)
+	var total float64
+	validUTXOs, total = bc.FindSuitableUTXOs(from, amount)
+
+	if total < amount {
+		fmt.Println("Not enough money!")
+		os.Exit(1)
+	}
+
+	var inputs []TXInput
+	var outputs []TXOutput
+
+	for txId, outputIndexes := range validUTXOs {
+		for _, index := range outputIndexes {
+			input := TXInput{[]byte(txId), int64(index), from}
+			inputs = append(inputs, input)
+
+		}
+	}
+
+	output := TXOutput{amount, to}
+	outputs = append(outputs, output)
+
+	if total > amount {
+		output := TXOutput{total - amount, to}
+		outputs = append(outputs, output)
+	}
+
+	tx := Transaction{nil, inputs, outputs}
+	tx.SetTXID()
+	return &tx
+
 }
-*/
